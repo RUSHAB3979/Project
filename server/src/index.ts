@@ -9,6 +9,8 @@ import { dirname } from 'path';
 import authRouter from './routes/auth.js';
 import googleAuthRouter from './routes/google-auth.js';
 import usersRouter from './routes/users.js';
+import skillsRouter from './routes/skills.js';
+import matchesRouter from './routes/matches.js';
 import './config/passport.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -52,6 +54,8 @@ app.get('/', (_req: Request, res: Response) => {
 app.use('/api/auth', authRouter);
 app.use('/api/auth', googleAuthRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/skills', skillsRouter);
+app.use('/api/matches', matchesRouter);
 
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

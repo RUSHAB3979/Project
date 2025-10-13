@@ -11,18 +11,21 @@ router.get('/:username', async (req, res) => {
 
   try {
     const user = await prisma.user.findFirst({
-      where: { name: username },
+      where: { username },
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         bio: true,
         college: true,
-        profile_img: true,
-        skillcoins: true,
+        profileImg: true,
+        headline: true,
         availability: true,
+        skillcoins: true,
+        role: true,
       },
-    });
+    } as any);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
@@ -46,10 +49,11 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     return res.status(403).json({ error: 'Not authorized to update this profile.' });
   }
 
-  const { bio, college, availability } = req.body as {
+  const { bio, college, availability, headline } = req.body as {
     bio?: string;
     college?: string;
     availability?: boolean | UserAvailability;
+    headline?: string;
   };
 
   const data: Record<string, unknown> = {};
@@ -60,6 +64,10 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
 
   if (college !== undefined) {
     data.college = college;
+  }
+
+  if (headline !== undefined) {
+    data.headline = headline;
   }
 
   if (availability !== undefined) {
@@ -73,19 +81,21 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const updatedUser = await prisma.user.update({
       where: { id },
-      data,
+      data: data as any,
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         bio: true,
         college: true,
-        profile_img: true,
+        headline: true,
+        profileImg: true,
         skillcoins: true,
         availability: true,
         role: true,
       },
-    });
+    } as any);
 
     return res.json(updatedUser);
   } catch (error) {

@@ -9,7 +9,8 @@ interface User {
   id: string;
   name: string;
   email: string;
-  profile_img: string | null;
+  username?: string;
+  profileImg?: string | null;
   role: string;
 }
 
@@ -38,7 +39,10 @@ export default function Navbar() {
         }
 
         const userData = await res.json();
-        setUser(userData);
+        setUser({
+          ...userData,
+          profileImg: userData.profileImg ?? userData.profile_img ?? null,
+        });
       } catch (error) {
         console.error('Error fetching user:', error);
         localStorage.removeItem('token');
@@ -49,9 +53,27 @@ export default function Navbar() {
     fetchUser();
   }, [router]);
 
-  const handleSignOut = () => {
-    localStorage.removeItem('token');
-    router.push('/login');
+  const handleSignOut = async () => {
+    setIsMenuOpen(false);
+    const token = localStorage.getItem('token');
+
+    try {
+      if (token) {
+        await fetch('http://localhost:3001/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error during sign out:', error);
+    } finally {
+      localStorage.removeItem('token');
+      document.cookie = 'token=; Max-Age=0; path=/;';
+      setUser(null);
+      window.location.replace('/login');
+    }
   };
 
   return (
@@ -73,9 +95,9 @@ export default function Navbar() {
                 >
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-700">{user.name}</span>
-                    {user.profile_img ? (
+                    {user.profileImg ? (
                       <Image
-                        src={user.profile_img}
+                        src={user.profileImg}
                         alt="Profile"
                         width={32}
                         height={32}

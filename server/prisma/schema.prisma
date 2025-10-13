@@ -7,281 +7,502 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id                    String               @id @default(cuid())
-  name                  String
-  email                 String               @unique
-  password_hash         String?              // Optional for OAuth users
-  college               String?
-  bio                   String?
-  profile_img           String?
-  skillcoins           Int                  @default(0)
-  role                  Role                 @default(USER)
-  availability         UserAvailability     @default(ONLINE)
-  google_id            String?              @unique
-  email_verified       Boolean              @default(false)
-  social_links         SocialLink[]
-  skills_teaching      Skill[]              @relation("TeachingSkills")
-  skills_learning      Skill[]              @relation("LearningSkills")
-  skill_requests_sent  SkillRequest[]       @relation("RequestsSent")
-  skill_requests_received SkillRequest[]    @relation("RequestsReceived")
-  mentorships_mentor   Mentorship[]         @relation("MentorMentorships")
-  mentorships_learner  Mentorship[]         @relation("LearnerMentorships")
-  projects_posted      Project[]            @relation("PostedProjects")
-  project_applications ProjectApplication[]
-  followers            Follow[]             @relation("Following")
-  following            Follow[]             @relation("Followers")
-  reviews_given        Review[]             @relation("ReviewsGiven")
-  reviews_received     Review[]             @relation("ReviewsReceived")
-  messages_sent        Message[]            @relation("SentMessages")
-  messages_received    Message[]            @relation("ReceivedMessages")
-  notifications        Notification[]
-  transactions         Transaction[]
-  forum_posts          ForumPost[]
-  forum_comments       ForumComment[]
-  badges               Badge[]
-  subscriptionTier    SubscriptionTier     @default(FREE)
-  verified_skills     VerifiedSkill[]
-  created_at          DateTime             @default(now())
-  updated_at          DateTime             @updatedAt
+  id                     String                  @id @default(uuid()) @db.Uuid
+  username               String                  @unique
+  name                   String
+  email                  String                  @unique
+  passwordHash           String?
+  college                String?
+  bio                    String?
+  headline               String?
+  timezone               String?                 @db.VarChar(64)
+  profileImg             String?
+  heroImage              String?
+  skillcoins             Int                      @default(0)
+  role                   Role                     @default(USER)
+  availability           UserAvailability         @default(ONLINE)
+  statusMessage          String?                  @db.VarChar(140)
+  googleId               String?                  @unique
+  emailVerified          Boolean                  @default(false)
+  profileCompleted       Boolean                  @default(false)
+  lastActiveAt           DateTime?
+  searchPreferences      Json?
+  onboardingStep         Int                      @default(0)
+  subscriptionTier       SubscriptionTier         @default(FREE)
+  socialLinks            SocialLink[]
+  skillsTeaching         Skill[]                  @relation("TeachingSkills")
+  skillsLearning         Skill[]                  @relation("LearningSkills")
+  skillRequestsSent      SkillRequest[]           @relation("RequestsSent")
+  skillRequestsReceived  SkillRequest[]           @relation("RequestsReceived")
+  mentorshipsMentor      Mentorship[]             @relation("MentorMentorships")
+  mentorshipsLearner     Mentorship[]             @relation("LearnerMentorships")
+  projectsPosted         Project[]                @relation("PostedProjects")
+  projectApplications    ProjectApplication[]
+  projectMessages        ProjectMessage[]
+  followers              Follow[]                 @relation("Following")
+  following              Follow[]                 @relation("Followers")
+  subscriptions          Subscription[]           @relation("Subscriber")
+  subscribers            Subscription[]           @relation("SubscribedTo")
+  reviewsGiven           Review[]                 @relation("ReviewsGiven")
+  reviewsReceived        Review[]                 @relation("ReviewsReceived")
+  sessions               UserSession[]
+  authTokens             AuthToken[]
+  matches                SkillMatch[]             @relation("MatchesAsUser")
+  matchedBy              SkillMatch[]             @relation("MatchesAsMatch")
+  messages               Message[]
+  threads                ThreadParticipant[]
+  notifications          Notification[]
+  notificationPreference NotificationPreference?
+  transactions           Transaction[]
+  forumPosts             ForumPost[]
+  forumComments          ForumComment[]
+  badges                 Badge[]
+  verifiedSkills         VerifiedSkill[]
+  walletEntries          WalletEntry[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
 
   @@index([email])
   @@index([college])
+  @@index([lastActiveAt])
+}
+
+model UserSession {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  refreshToken String   @db.VarChar(512)
+  userAgent    String?  @db.VarChar(255)
+  ipAddress    String?  @db.VarChar(64)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  revokedAt    DateTime?
+  metadata     Json?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@unique([userId, refreshToken])
+}
+
+model AuthToken {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String         @db.Uuid
+  type       AuthTokenType
+  tokenHash  String         @db.VarChar(512)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  metadata   Json?
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@unique([type, tokenHash])
 }
 
 model Skill {
-  id                String         @id @default(cuid())
-  name              String
-  category          String
-  level             SkillLevel
-  description       String         @db.Text
-  session_mode      SessionMode    @default(ONLINE)
-  tags              Tag[]
-  teacher           User           @relation("TeachingSkills", fields: [teacherId], references: [id])
-  teacherId         String
-  learners          User[]        @relation("LearningSkills")
-  skill_requests    SkillRequest[]
-  mentorships      Mentorship[]
-  required_for     Project[]      @relation("RequiredSkills")
-  created_at        DateTime       @default(now())
-  updated_at        DateTime       @updatedAt
+  id             String             @id @default(uuid()) @db.Uuid
+  name           String
+  category       String
+  level          SkillLevel
+  description    String             @db.Text
+  sessionMode    SessionMode        @default(ONLINE)
+  visibility     SkillVisibility    @default(PUBLIC)
+  location       String?            @db.VarChar(120)
+  deliveryModes  Json?
+  featured       Boolean            @default(false)
+  searchVector   Unsupported("tsvector")?
+  tags           Tag[]
+  teacher        User               @relation("TeachingSkills", fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId      String             @db.Uuid
+  learners       User[]             @relation("LearningSkills")
+  skillRequests  SkillRequest[]
+  mentorships    Mentorship[]
+  requiredFor    Project[]          @relation("RequiredSkills")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([category])
   @@index([teacherId])
+  @@index([featured])
 }
 
 model SkillRequest {
-  id            String           @id @default(cuid())
-  requester     User            @relation("RequestsSent", fields: [requesterId], references: [id])
-  requesterId   String
-  teacher       User            @relation("RequestsReceived", fields: [teacherId], references: [id])
-  teacherId     String
-  skill         Skill           @relation(fields: [skillId], references: [id])
-  skillId       String
-  status        RequestStatus   @default(PENDING)
-  message       String?         @db.Text
-  created_at    DateTime        @default(now())
-  updated_at    DateTime        @updatedAt
+  id            String         @id @default(uuid()) @db.Uuid
+  requesterId   String         @db.Uuid
+  teacherId     String         @db.Uuid
+  skillId       String         @db.Uuid
+  status        RequestStatus  @default(PENDING)
+  message       String?        @db.Text
+  preferredSlot Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  requester     User           @relation("RequestsSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  teacher       User           @relation("RequestsReceived", fields: [teacherId], references: [id], onDelete: Cascade)
+  skill         Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@index([requesterId])
   @@index([teacherId])
   @@index([skillId])
+  @@index([status])
 }
 
 model Mentorship {
-  id            String           @id @default(cuid())
-  mentor        User            @relation("MentorMentorships", fields: [mentorId], references: [id])
-  mentorId      String
-  learner       User            @relation("LearnerMentorships", fields: [learnerId], references: [id])
-  learnerId     String
-  skill         Skill           @relation(fields: [skillId], references: [id])
-  skillId       String
-  status        MentorshipStatus @default(SCHEDULED)
-  start_date    DateTime
-  end_date      DateTime?
-  created_at    DateTime        @default(now())
-  updated_at    DateTime        @updatedAt
+  id            String            @id @default(uuid()) @db.Uuid
+  mentorId      String            @db.Uuid
+  learnerId     String            @db.Uuid
+  skillId       String            @db.Uuid
+  mentorshipType MentorshipType   @default(ONE_TO_ONE)
+  status        MentorshipStatus  @default(SCHEDULED)
+  startDate     DateTime
+  endDate       DateTime?
+  meetingLink   String?           @db.VarChar(255)
+  notes         String?           @db.Text
+  metadata      Json?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  mentor        User              @relation("MentorMentorships", fields: [mentorId], references: [id], onDelete: Cascade)
+  learner       User              @relation("LearnerMentorships", fields: [learnerId], references: [id], onDelete: Cascade)
+  skill         Skill             @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  sessions      MentorshipSession[]
 
   @@index([mentorId])
   @@index([learnerId])
   @@index([skillId])
-}
-
-model Project {
-  id            String               @id @default(cuid())
-  title         String
-  description   String               @db.Text
-  poster        User                @relation("PostedProjects", fields: [posterId], references: [id])
-  posterId      String
-  budget_min    Float
-  budget_max    Float
-  deadline      DateTime
-  status        ProjectStatus       @default(OPEN)
-  applications  ProjectApplication[]
-  skills_required Skill[]           @relation("RequiredSkills")
-  created_at    DateTime            @default(now())
-  updated_at    DateTime            @updatedAt
-
-  @@index([posterId])
   @@index([status])
 }
 
+model MentorshipSession {
+  id            String    @id @default(uuid()) @db.Uuid
+  mentorshipId  String    @db.Uuid
+  scheduledFor  DateTime
+  durationMins  Int
+  status        MentorshipSessionStatus @default(SCHEDULED)
+  meetingUrl    String?   @db.VarChar(255)
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  mentorship    Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+
+  @@index([mentorshipId])
+  @@index([scheduledFor])
+}
+
+model Project {
+  id             String             @id @default(uuid()) @db.Uuid
+  title          String
+  description    String             @db.Text
+  posterId       String             @db.Uuid
+  budgetMin      Float
+  budgetMax      Float
+  deadline       DateTime
+  status         ProjectStatus      @default(OPEN)
+  location       String?            @db.VarChar(120)
+  remoteFriendly Boolean            @default(true)
+  metadata       Json?
+  searchVector   Unsupported("tsvector")?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  poster         User               @relation("PostedProjects", fields: [posterId], references: [id], onDelete: Cascade)
+  applications   ProjectApplication[]
+  skillsRequired Skill[]            @relation("RequiredSkills")
+  milestones     ProjectMilestone[]
+  discussions    ProjectMessage[]
+
+  @@index([posterId])
+  @@index([status])
+  @@index([remoteFriendly])
+}
+
+model ProjectMilestone {
+  id          String        @id @default(uuid()) @db.Uuid
+  projectId   String        @db.Uuid
+  title       String
+  description String?       @db.Text
+  dueDate     DateTime?
+  status      MilestoneStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model ProjectMessage {
+  id          String        @id @default(uuid()) @db.Uuid
+  projectId   String        @db.Uuid
+  senderId    String        @db.Uuid
+  content     String        @db.Text
+  attachments Json?
+  createdAt   DateTime      @default(now())
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sender      User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([senderId])
+}
+
 model ProjectApplication {
-  id          String           @id @default(cuid())
-  project     Project         @relation(fields: [projectId], references: [id])
-  projectId   String
-  applicant   User            @relation(fields: [applicantId], references: [id])
-  applicantId String
-  proposal    String          @db.Text
-  bid_amount  Float
-  status      ApplicationStatus @default(PENDING)
-  created_at  DateTime        @default(now())
-  updated_at  DateTime        @updatedAt
+  id           String             @id @default(uuid()) @db.Uuid
+  projectId    String             @db.Uuid
+  applicantId  String             @db.Uuid
+  proposal     String             @db.Text
+  bidAmount    Float
+  status       ApplicationStatus  @default(PENDING)
+  attachments  Json?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  applicant    User               @relation(fields: [applicantId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([applicantId])
+  @@index([status])
 }
 
 model Follow {
-  follower     User     @relation("Following", fields: [followerId], references: [id])
-  followerId   String
-  following    User     @relation("Followers", fields: [followingId], references: [id])
-  followingId  String
-  created_at   DateTime @default(now())
+  followerId  String   @db.Uuid
+  followingId String   @db.Uuid
+  createdAt   DateTime @default(now())
+  follower    User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
 }
 
+model Subscription {
+  id              String             @id @default(uuid()) @db.Uuid
+  subscriberId    String             @db.Uuid
+  subscribedToId  String             @db.Uuid
+  tier            SubscriptionTier   @default(PREMIUM)
+  status          SubscriptionStatus @default(ACTIVE)
+  startedAt       DateTime           @default(now())
+  renewedAt       DateTime?
+  expiresAt       DateTime?
+  metadata        Json?
+  subscriber      User               @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
+  subscribedTo    User               @relation("SubscribedTo", fields: [subscribedToId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriberId, subscribedToId])
+  @@index([status])
+}
+
 model Review {
-  id           String   @id @default(cuid())
-  reviewer     User     @relation("ReviewsGiven", fields: [reviewerId], references: [id])
-  reviewerId   String
-  reviewed     User     @relation("ReviewsReceived", fields: [reviewedId], references: [id])
-  reviewedId   String
-  rating       Int      @db.TinyInt
-  comment      String   @db.Text
-  created_at   DateTime @default(now())
+  id          String   @id @default(uuid()) @db.Uuid
+  reviewerId  String   @db.Uuid
+  reviewedId  String   @db.Uuid
+  rating      Int      @db.SmallInt
+  comment     String   @db.Text
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  reviewer    User     @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewed    User     @relation("ReviewsReceived", fields: [reviewedId], references: [id], onDelete: Cascade)
 
   @@index([reviewerId])
   @@index([reviewedId])
 }
 
-model Message {
-  id           String   @id @default(cuid())
-  sender       User     @relation("SentMessages", fields: [senderId], references: [id])
-  senderId     String
-  receiver     User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  receiverId   String
-  content      String   @db.Text
-  read         Boolean  @default(false)
-  created_at   DateTime @default(now())
+model MessageThread {
+  id          String               @id @default(uuid()) @db.Uuid
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  lastMessage DateTime?
+  metadata    Json?
+  messages    Message[]
+  participants ThreadParticipant[]
+}
 
+model ThreadParticipant {
+  id        String        @id @default(uuid()) @db.Uuid
+  threadId  String        @db.Uuid
+  userId    String        @db.Uuid
+  role      ThreadRole    @default(MEMBER)
+  joinedAt  DateTime      @default(now())
+  muted     Boolean       @default(false)
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id          String        @id @default(uuid()) @db.Uuid
+  threadId    String        @db.Uuid
+  senderId    String        @db.Uuid
+  content     String        @db.Text
+  attachments Json?
+  readBy      String[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  thread      MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender      User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
   @@index([senderId])
-  @@index([receiverId])
 }
 
 model Notification {
-  id           String           @id @default(cuid())
-  user         User             @relation(fields: [userId], references: [id])
-  userId       String
-  type         NotificationType
-  content      String           @db.Text
-  is_read      Boolean          @default(false)
-  created_at   DateTime         @default(now())
+  id         String               @id @default(uuid()) @db.Uuid
+  userId     String               @db.Uuid
+  type       NotificationType
+  title      String               @db.VarChar(160)
+  content    String               @db.Text
+  channel    NotificationChannel  @default(IN_APP)
+  isRead     Boolean              @default(false)
+  metadata   Json?
+  createdAt  DateTime             @default(now())
+  readAt     DateTime?
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([created_at])
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+model NotificationPreference {
+  id             String              @id @default(uuid()) @db.Uuid
+  userId         String              @db.Uuid
+  inApp          Boolean             @default(true)
+  email          Boolean             @default(true)
+  push           Boolean             @default(false)
+  digestFrequency DigestFrequency    @default(DAILY)
+  quietHours     Json?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
 }
 
 model Transaction {
-  id           String           @id @default(cuid())
-  user         User             @relation(fields: [userId], references: [id])
-  userId       String
-  amount       Int
-  type         TransactionType
-  description  String
-  created_at   DateTime         @default(now())
+  id          String            @id @default(uuid()) @db.Uuid
+  userId      String            @db.Uuid
+  amount      Int
+  type        TransactionType
+  description String
+  referenceId String?           @db.VarChar(120)
+  metadata    Json?
+  createdAt   DateTime          @default(now())
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([created_at])
+  @@index([createdAt])
+}
+
+model WalletEntry {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @db.Uuid
+  change      Int
+  balance     Int
+  reason      WalletReason
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model ForumPost {
-  id           String         @id @default(cuid())
-  author       User           @relation(fields: [authorId], references: [id])
-  authorId     String
-  title        String
-  content      String         @db.Text
-  category     ForumCategory
-  comments     ForumComment[]
-  upvotes      Int           @default(0)
-  created_at   DateTime       @default(now())
-  updated_at   DateTime       @updatedAt
+  id          String         @id @default(uuid()) @db.Uuid
+  authorId    String         @db.Uuid
+  title       String
+  content     String         @db.Text
+  category    ForumCategory
+  tags        String[]
+  upvotes     Int            @default(0)
+  downvotes   Int            @default(0)
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments    ForumComment[]
 
   @@index([authorId])
   @@index([category])
-  @@index([created_at])
+  @@index([createdAt])
 }
 
 model ForumComment {
-  id           String     @id @default(cuid())
-  post         ForumPost  @relation(fields: [postId], references: [id])
-  postId       String
-  author       User       @relation(fields: [authorId], references: [id])
-  authorId     String
-  content      String     @db.Text
-  upvotes      Int       @default(0)
-  created_at   DateTime   @default(now())
-  updated_at   DateTime   @updatedAt
+  id         String        @id @default(uuid()) @db.Uuid
+  postId     String        @db.Uuid
+  authorId   String        @db.Uuid
+  content    String        @db.Text
+  upvotes    Int           @default(0)
+  downvotes  Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  post       ForumPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([authorId])
 }
 
 model Tag {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  skills      Skill[]
-  created_at  DateTime @default(now())
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @unique
+  kind       TagKind  @default(SKILL)
+  createdAt  DateTime @default(now())
+  skills     Skill[]
 
   @@index([name])
 }
 
 model SocialLink {
-  id        String     @id @default(cuid())
-  user      User       @relation(fields: [userId], references: [id])
-  userId    String
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
   platform  Platform
   url       String
-  created_at DateTime  @default(now())
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model Badge {
-  id          String     @id @default(cuid())
-  user        User       @relation(fields: [userId], references: [id])
-  userId      String
-  type        BadgeType
-  awarded_at  DateTime   @default(now())
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  type       BadgeType
+  awardedAt  DateTime  @default(now())
+  metadata   Json?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model VerifiedSkill {
-  id          String     @id @default(cuid())
-  user        User       @relation(fields: [userId], references: [id])
-  userId      String
-  skill_name  String
-  verified_at DateTime   @default(now())
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  skillName   String
+  authority   String?
+  verifiedAt  DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model SkillMatch {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  matchUserId  String   @db.Uuid
+  score        Float
+  reasons      String[]
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation("MatchesAsUser", fields: [userId], references: [id], onDelete: Cascade)
+  matchUser    User     @relation("MatchesAsMatch", fields: [matchUserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchUserId])
+  @@index([score])
 }
 
 enum Role {
@@ -301,6 +522,13 @@ enum SkillLevel {
   BEGINNER
   INTERMEDIATE
   EXPERT
+}
+
+enum SkillVisibility {
+  PUBLIC
+  FOLLOWERS
+  SUBSCRIBERS
+  PRIVATE
 }
 
 enum SessionMode {
@@ -323,11 +551,33 @@ enum MentorshipStatus {
   CANCELLED
 }
 
+enum MentorshipSessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum MentorshipType {
+  ONE_TO_ONE
+  GROUP
+  BOOTCAMP
+}
+
 enum ProjectStatus {
   OPEN
   IN_PROGRESS
   COMPLETED
   CLOSED
+  CANCELLED
+}
+
+enum MilestoneStatus {
+  PENDING
+  ACTIVE
+  SUBMITTED
+  APPROVED
+  REJECTED
 }
 
 enum ApplicationStatus {
@@ -345,6 +595,14 @@ enum NotificationType {
   NEW_REVIEW
   SKILL_MATCH
   CREDIT_RECEIVED
+  MILESTONE_DUE
+  PROMOTION
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
 }
 
 enum TransactionType {
@@ -352,6 +610,18 @@ enum TransactionType {
   SPENT
   REFUNDED
   BONUS
+  WITHDRAWAL
+  DEPOSIT
+}
+
+enum WalletReason {
+  SESSION_PAYOUT
+  SESSION_SPEND
+  PROJECT_PAYOUT
+  PROJECT_DEPOSIT
+  BONUS
+  REFUND
+  ADJUSTMENT
 }
 
 enum ForumCategory {
@@ -361,6 +631,7 @@ enum ForumCategory {
   LANGUAGES
   FREELANCE
   GENERAL
+  STARTUPS
 }
 
 enum Platform {
@@ -369,6 +640,8 @@ enum Platform {
   TWITTER
   PORTFOLIO
   OTHER
+  BEHANCE
+  DRIBBBLE
 }
 
 enum BadgeType {
@@ -377,10 +650,44 @@ enum BadgeType {
   RELIABLE_COLLABORATOR
   SKILL_MASTER
   COMMUNITY_LEADER
+  INNOVATOR
 }
 
 enum SubscriptionTier {
   FREE
   PREMIUM
   VERIFIED
+  ELITE
 }
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
+}
+
+enum AuthTokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+  MAGIC_LOGIN
+}
+
+enum DigestFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ThreadRole {
+  MEMBER
+  OWNER
+  MODERATOR
+}
+
+enum TagKind {
+  SKILL
+  PROJECT
+  FORUM
+}
+

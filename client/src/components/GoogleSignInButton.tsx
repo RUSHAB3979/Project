@@ -27,7 +27,6 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ className = '' 
         </svg>
       </div>
       <span className="font-medium">Sign in with Google</span>
-      <span>Sign in with Google</span>
     </button>
   );
 };

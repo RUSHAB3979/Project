@@ -10,7 +10,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  profile_img: string | null;
+  profileImg: string | null;
   role: string;
   college?: string;
   bio?: string;
@@ -42,7 +42,10 @@ export default function ProfilePage() {
         if (!res.ok) throw new Error('Failed to fetch user');
 
         const userData = await res.json();
-        setUser(userData);
+        setUser({
+          ...userData,
+          profileImg: userData.profileImg ?? userData.profile_img ?? null,
+        });
         setFormData({
           bio: userData.bio || '',
           college: userData.college || '',
@@ -108,9 +111,9 @@ export default function ProfilePage() {
         <div className="bg-white shadow sm:rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <div className="flex items-center space-x-5">
-              {user.profile_img ? (
+              {user.profileImg ? (
                 <Image
-                  src={user.profile_img}
+                  src={user.profileImg}
                   alt="Profile"
                   width={128}
                   height={128}

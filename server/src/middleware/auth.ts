@@ -33,8 +33,8 @@ export const requireAuth = async (
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { password_hash, ...userWithoutPassword } = user;
-    req.user = userWithoutPassword;
+  const { passwordHash, password_hash, ...userWithoutPassword } = user as any;
+  req.user = userWithoutPassword;
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });

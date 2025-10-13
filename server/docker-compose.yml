@@ -1,20 +1,36 @@
 
-version: '3.8'
+version: '3.9'
 services:
-  db:
-    image: mysql:8.0
-    cap_add:
-      - SYS_NICE
-    restart: always
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      MYSQL_DATABASE: skillxchange
-      MYSQL_USER: skillx_user
-      MYSQL_PASSWORD: SkillXchange123!
-      MYSQL_ROOT_PASSWORD: root
+      POSTGRES_DB: skillxchange
+      POSTGRES_USER: skillx_user
+      POSTGRES_PASSWORD: SkillXchange123!
     ports:
-      - '3307:3306'
+      - '5433:5432'
     volumes:
-      - db_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  db_data:
+  postgres_data:
+  redis_data:
