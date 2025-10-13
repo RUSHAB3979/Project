@@ -1,0 +1,386 @@
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String               @id @default(cuid())
+  name                  String
+  email                 String               @unique
+  password_hash         String?              // Optional for OAuth users
+  college               String?
+  bio                   String?
+  profile_img           String?
+  skillcoins           Int                  @default(0)
+  role                  Role                 @default(USER)
+  availability         UserAvailability     @default(ONLINE)
+  google_id            String?              @unique
+  email_verified       Boolean              @default(false)
+  social_links         SocialLink[]
+  skills_teaching      Skill[]              @relation("TeachingSkills")
+  skills_learning      Skill[]              @relation("LearningSkills")
+  skill_requests_sent  SkillRequest[]       @relation("RequestsSent")
+  skill_requests_received SkillRequest[]    @relation("RequestsReceived")
+  mentorships_mentor   Mentorship[]         @relation("MentorMentorships")
+  mentorships_learner  Mentorship[]         @relation("LearnerMentorships")
+  projects_posted      Project[]            @relation("PostedProjects")
+  project_applications ProjectApplication[]
+  followers            Follow[]             @relation("Following")
+  following            Follow[]             @relation("Followers")
+  reviews_given        Review[]             @relation("ReviewsGiven")
+  reviews_received     Review[]             @relation("ReviewsReceived")
+  messages_sent        Message[]            @relation("SentMessages")
+  messages_received    Message[]            @relation("ReceivedMessages")
+  notifications        Notification[]
+  transactions         Transaction[]
+  forum_posts          ForumPost[]
+  forum_comments       ForumComment[]
+  badges               Badge[]
+  subscriptionTier    SubscriptionTier     @default(FREE)
+  verified_skills     VerifiedSkill[]
+  created_at          DateTime             @default(now())
+  updated_at          DateTime             @updatedAt
+
+  @@index([email])
+  @@index([college])
+}
+
+model Skill {
+  id                String         @id @default(cuid())
+  name              String
+  category          String
+  level             SkillLevel
+  description       String         @db.Text
+  session_mode      SessionMode    @default(ONLINE)
+  tags              Tag[]
+  teacher           User           @relation("TeachingSkills", fields: [teacherId], references: [id])
+  teacherId         String
+  learners          User[]        @relation("LearningSkills")
+  skill_requests    SkillRequest[]
+  mentorships      Mentorship[]
+  required_for     Project[]      @relation("RequiredSkills")
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  @@index([category])
+  @@index([teacherId])
+}
+
+model SkillRequest {
+  id            String           @id @default(cuid())
+  requester     User            @relation("RequestsSent", fields: [requesterId], references: [id])
+  requesterId   String
+  teacher       User            @relation("RequestsReceived", fields: [teacherId], references: [id])
+  teacherId     String
+  skill         Skill           @relation(fields: [skillId], references: [id])
+  skillId       String
+  status        RequestStatus   @default(PENDING)
+  message       String?         @db.Text
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+
+  @@index([requesterId])
+  @@index([teacherId])
+  @@index([skillId])
+}
+
+model Mentorship {
+  id            String           @id @default(cuid())
+  mentor        User            @relation("MentorMentorships", fields: [mentorId], references: [id])
+  mentorId      String
+  learner       User            @relation("LearnerMentorships", fields: [learnerId], references: [id])
+  learnerId     String
+  skill         Skill           @relation(fields: [skillId], references: [id])
+  skillId       String
+  status        MentorshipStatus @default(SCHEDULED)
+  start_date    DateTime
+  end_date      DateTime?
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+
+  @@index([mentorId])
+  @@index([learnerId])
+  @@index([skillId])
+}
+
+model Project {
+  id            String               @id @default(cuid())
+  title         String
+  description   String               @db.Text
+  poster        User                @relation("PostedProjects", fields: [posterId], references: [id])
+  posterId      String
+  budget_min    Float
+  budget_max    Float
+  deadline      DateTime
+  status        ProjectStatus       @default(OPEN)
+  applications  ProjectApplication[]
+  skills_required Skill[]           @relation("RequiredSkills")
+  created_at    DateTime            @default(now())
+  updated_at    DateTime            @updatedAt
+
+  @@index([posterId])
+  @@index([status])
+}
+
+model ProjectApplication {
+  id          String           @id @default(cuid())
+  project     Project         @relation(fields: [projectId], references: [id])
+  projectId   String
+  applicant   User            @relation(fields: [applicantId], references: [id])
+  applicantId String
+  proposal    String          @db.Text
+  bid_amount  Float
+  status      ApplicationStatus @default(PENDING)
+  created_at  DateTime        @default(now())
+  updated_at  DateTime        @updatedAt
+
+  @@index([projectId])
+  @@index([applicantId])
+}
+
+model Follow {
+  follower     User     @relation("Following", fields: [followerId], references: [id])
+  followerId   String
+  following    User     @relation("Followers", fields: [followingId], references: [id])
+  followingId  String
+  created_at   DateTime @default(now())
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  reviewer     User     @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  reviewerId   String
+  reviewed     User     @relation("ReviewsReceived", fields: [reviewedId], references: [id])
+  reviewedId   String
+  rating       Int      @db.TinyInt
+  comment      String   @db.Text
+  created_at   DateTime @default(now())
+
+  @@index([reviewerId])
+  @@index([reviewedId])
+}
+
+model Message {
+  id           String   @id @default(cuid())
+  sender       User     @relation("SentMessages", fields: [senderId], references: [id])
+  senderId     String
+  receiver     User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId   String
+  content      String   @db.Text
+  read         Boolean  @default(false)
+  created_at   DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model Notification {
+  id           String           @id @default(cuid())
+  user         User             @relation(fields: [userId], references: [id])
+  userId       String
+  type         NotificationType
+  content      String           @db.Text
+  is_read      Boolean          @default(false)
+  created_at   DateTime         @default(now())
+
+  @@index([userId])
+  @@index([created_at])
+}
+
+model Transaction {
+  id           String           @id @default(cuid())
+  user         User             @relation(fields: [userId], references: [id])
+  userId       String
+  amount       Int
+  type         TransactionType
+  description  String
+  created_at   DateTime         @default(now())
+
+  @@index([userId])
+  @@index([created_at])
+}
+
+model ForumPost {
+  id           String         @id @default(cuid())
+  author       User           @relation(fields: [authorId], references: [id])
+  authorId     String
+  title        String
+  content      String         @db.Text
+  category     ForumCategory
+  comments     ForumComment[]
+  upvotes      Int           @default(0)
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+
+  @@index([authorId])
+  @@index([category])
+  @@index([created_at])
+}
+
+model ForumComment {
+  id           String     @id @default(cuid())
+  post         ForumPost  @relation(fields: [postId], references: [id])
+  postId       String
+  author       User       @relation(fields: [authorId], references: [id])
+  authorId     String
+  content      String     @db.Text
+  upvotes      Int       @default(0)
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  skills      Skill[]
+  created_at  DateTime @default(now())
+
+  @@index([name])
+}
+
+model SocialLink {
+  id        String     @id @default(cuid())
+  user      User       @relation(fields: [userId], references: [id])
+  userId    String
+  platform  Platform
+  url       String
+  created_at DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Badge {
+  id          String     @id @default(cuid())
+  user        User       @relation(fields: [userId], references: [id])
+  userId      String
+  type        BadgeType
+  awarded_at  DateTime   @default(now())
+
+  @@index([userId])
+}
+
+model VerifiedSkill {
+  id          String     @id @default(cuid())
+  user        User       @relation(fields: [userId], references: [id])
+  userId      String
+  skill_name  String
+  verified_at DateTime   @default(now())
+
+  @@index([userId])
+}
+
+enum Role {
+  USER
+  MENTOR
+  ADMIN
+}
+
+enum UserAvailability {
+  ONLINE
+  BUSY
+  LEARNING
+  OFFLINE
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  EXPERT
+}
+
+enum SessionMode {
+  ONLINE
+  IN_PERSON
+  HYBRID
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum MentorshipStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProjectStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CLOSED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum NotificationType {
+  NEW_FOLLOWER
+  SESSION_REQUEST
+  SESSION_RESPONSE
+  PROJECT_UPDATE
+  NEW_REVIEW
+  SKILL_MATCH
+  CREDIT_RECEIVED
+}
+
+enum TransactionType {
+  EARNED
+  SPENT
+  REFUNDED
+  BONUS
+}
+
+enum ForumCategory {
+  TECHNICAL
+  CREATIVE
+  SOFT_SKILLS
+  LANGUAGES
+  FREELANCE
+  GENERAL
+}
+
+enum Platform {
+  GITHUB
+  LINKEDIN
+  TWITTER
+  PORTFOLIO
+  OTHER
+}
+
+enum BadgeType {
+  TOP_MENTOR
+  RISING_TALENT
+  RELIABLE_COLLABORATOR
+  SKILL_MASTER
+  COMMUNITY_LEADER
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+  VERIFIED
+}
