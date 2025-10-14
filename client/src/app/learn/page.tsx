@@ -1,7 +1,8 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface SkillItem {
   id: string;
@@ -17,11 +18,29 @@ interface SkillItem {
   description: string;
 }
 
+interface RoadmapData {
+  skillIds: string[];
+  title?: string;
+  savedAt?: string;
+}
+
 const LearnPage = () => {
+  const router = useRouter();
   const [recommended, setRecommended] = useState<SkillItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [source, setSource] = useState<'personalized' | 'fallback' | 'catalog' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
+  const [isSavingRoadmap, setIsSavingRoadmap] = useState(false);
+  const [roadmapBanner, setRoadmapBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('token');
+    if (stored) {
+      setToken(stored);
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -30,13 +49,11 @@ const LearnPage = () => {
       setIsLoading(true);
       setError(null);
 
-      const storedToken = localStorage.getItem('token');
-
       try {
-        if (storedToken) {
+        if (token) {
           const res = await fetch('http://localhost:3001/api/skills/recommended', {
             headers: {
-              Authorization: `Bearer ${storedToken}`,
+              Authorization: `Bearer ${token}`,
             },
             signal: controller.signal,
           });
@@ -51,6 +68,7 @@ const LearnPage = () => {
 
           if (res.status === 401) {
             localStorage.removeItem('token');
+            setToken(null);
           }
         }
 
@@ -78,7 +96,142 @@ const LearnPage = () => {
     fetchRecommendations();
 
     return () => controller.abort();
-  }, []);
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      setRoadmap(null);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadRoadmap = async () => {
+      try {
+        const res = await fetch('http://localhost:3001/api/users/me/roadmap', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          setToken(null);
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error('Failed to load roadmap');
+        }
+
+        const data = await res.json();
+        setRoadmap(data.roadmap ?? null);
+      } catch (fetchError) {
+        if ((fetchError as Error).name !== 'AbortError') {
+          console.error('Error loading roadmap:', fetchError);
+        }
+      }
+    };
+
+    loadRoadmap();
+
+    return () => controller.abort();
+  }, [token]);
+
+  useEffect(() => {
+    if (!roadmapBanner) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setRoadmapBanner(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [roadmapBanner]);
+
+  const recommendedMatchesRoadmap = useMemo(() => {
+    if (!roadmap) {
+      return false;
+    }
+
+    if (roadmap.skillIds.length !== recommended.length) {
+      return false;
+    }
+
+    return recommended.every((skill, index) => roadmap.skillIds[index] === skill.id);
+  }, [recommended, roadmap]);
+
+  const handleSaveRoadmap = async () => {
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    if (!recommended.length) {
+      setRoadmapBanner({ type: 'error', text: 'Add a few skills to save a roadmap.' });
+      return;
+    }
+
+    setIsSavingRoadmap(true);
+
+    try {
+      const res = await fetch('http://localhost:3001/api/users/me/roadmap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          skillIds: recommended.map((skill) => skill.id),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? 'Failed to save roadmap.');
+      }
+
+      const data = await res.json();
+      setRoadmap(data.roadmap ?? null);
+      setRoadmapBanner({ type: 'success', text: 'Roadmap saved to your learning plan.' });
+    } catch (saveError) {
+      console.error('Error saving roadmap:', saveError);
+      setRoadmapBanner({
+        type: 'error',
+        text: (saveError as Error).message || 'Could not save roadmap right now.',
+      });
+    } finally {
+      setIsSavingRoadmap(false);
+    }
+  };
+
+  const canSaveRoadmap = recommended.length > 0 && !recommendedMatchesRoadmap;
+
+  const lastSavedLabel = useMemo(() => {
+    if (!roadmap?.savedAt) {
+      return null;
+    }
+
+    try {
+      return new Date(roadmap.savedAt).toLocaleString();
+    } catch (dateError) {
+      console.error('Error formatting roadmap timestamp:', dateError);
+      return null;
+    }
+  }, [roadmap?.savedAt]);
+
+  const roadmapButtonLabel = isSavingRoadmap
+    ? 'Saving...'
+    : recommendedMatchesRoadmap
+    ? 'Roadmap saved'
+    : recommended.length === 0
+    ? 'Nothing to save yet'
+    : 'Save this roadmap';
+
+  const roadmapButtonStyles = canSaveRoadmap
+    ? 'border border-blue-300/40 bg-blue-500/40 text-white hover:bg-blue-500/60'
+    : recommendedMatchesRoadmap
+    ? 'border border-emerald-300/40 bg-emerald-500/20 text-emerald-100'
+    : 'border border-white/15 bg-white/5 text-white/60';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white">
@@ -140,14 +293,41 @@ const LearnPage = () => {
                   ? 'Popular mentors from our community while you curate your learning plan.'
                   : 'Fresh mentors being curated for you.'}
               </p>
+              {lastSavedLabel && (
+                <p className="mt-2 text-xs text-blue-200/60">Last saved {lastSavedLabel}</p>
+              )}
             </div>
-            <Link
-              href="/skills"
-              className="inline-flex items-center justify-center rounded-md border border-white/20 px-4 py-2 text-xs font-semibold text-white/90 transition hover:border-white/40 hover:text-white"
-            >
-              See all skills
-            </Link>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <button
+                type="button"
+                onClick={handleSaveRoadmap}
+                disabled={!canSaveRoadmap || isSavingRoadmap}
+                className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-xs font-semibold transition ${roadmapButtonStyles} ${
+                  isSavingRoadmap ? 'opacity-70' : ''
+                } ${!canSaveRoadmap && !recommendedMatchesRoadmap ? 'cursor-not-allowed' : ''}`}
+              >
+                {roadmapButtonLabel}
+              </button>
+              <Link
+                href="/skills"
+                className="inline-flex items-center justify-center rounded-md border border-white/20 px-4 py-2 text-xs font-semibold text-white/90 transition hover:border-white/40 hover:text-white"
+              >
+                See all skills
+              </Link>
+            </div>
           </div>
+
+          {roadmapBanner && (
+            <div
+              className={`mt-6 rounded-lg border px-4 py-3 text-sm ${
+                roadmapBanner.type === 'success'
+                  ? 'border-emerald-300/40 bg-emerald-500/20 text-emerald-100'
+                  : 'border-red-400/30 bg-red-500/20 text-red-100'
+              }`}
+            >
+              {roadmapBanner.text}
+            </div>
+          )}
 
           {error && (
             <div className="mt-6 rounded-lg border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">

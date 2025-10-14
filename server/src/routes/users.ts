@@ -6,6 +6,156 @@ import type { AuthenticatedRequest } from '../middleware/auth.js';
 const router = Router();
 const prisma = new PrismaClient();
 
+type RoadmapPreferences = {
+  skillIds: string[];
+  title?: string;
+  savedAt?: string;
+};
+
+const sanitizeRoadmap = (value: unknown): RoadmapPreferences => {
+  if (!value || typeof value !== 'object') {
+    return { skillIds: [] };
+  }
+
+  const maybeRoadmap = value as Record<string, unknown>;
+  const rawSkillIds = Array.isArray(maybeRoadmap.skillIds)
+    ? maybeRoadmap.skillIds.filter((item): item is string => typeof item === 'string')
+    : [];
+
+  const roadmap: RoadmapPreferences = {
+    skillIds: rawSkillIds,
+  };
+
+  if (typeof maybeRoadmap.title === 'string') {
+    roadmap.title = maybeRoadmap.title;
+  }
+
+  if (typeof maybeRoadmap.savedAt === 'string') {
+    roadmap.savedAt = maybeRoadmap.savedAt;
+  }
+
+  return roadmap;
+};
+
+router.get('/me/roadmap', requireAuth, async (req: AuthenticatedRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        searchPreferences: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const preferences = (user.searchPreferences ?? {}) as Record<string, unknown>;
+    const roadmap = sanitizeRoadmap(preferences.roadmap);
+
+    let skills: unknown[] = [];
+
+    if (roadmap.skillIds.length) {
+      const foundSkills = await prisma.skill.findMany({
+        where: { id: { in: roadmap.skillIds } },
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          level: true,
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              headline: true,
+            },
+          },
+        },
+      });
+
+      const orderMap = new Map(roadmap.skillIds.map((skillId, index) => [skillId, index]));
+      skills = foundSkills
+        .filter((item) => orderMap.has(item.id))
+        .sort((a, b) => (orderMap.get(a.id)! - orderMap.get(b.id)!));
+    }
+
+    return res.json({
+      roadmap,
+      skills,
+    });
+  } catch (error) {
+    console.error('Error fetching roadmap:', error);
+    return res.status(500).json({ error: 'Failed to load roadmap.' });
+  }
+});
+
+router.post('/me/roadmap', requireAuth, async (req: AuthenticatedRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+
+  const { skillIds = [], title } = (req.body ?? {}) as {
+    skillIds?: unknown;
+    title?: unknown;
+  };
+
+  if (!Array.isArray(skillIds)) {
+    return res.status(400).json({ error: 'skillIds must be an array of strings.' });
+  }
+
+  const cleanedIds = Array.from(
+    new Set(skillIds.filter((item): item is string => typeof item === 'string'))
+  ).slice(0, 20);
+
+  if (!cleanedIds.length) {
+    return res.status(400).json({ error: 'At least one skill must be provided.' });
+  }
+
+  const trimmedTitle = typeof title === 'string' && title.trim().length ? title.trim() : undefined;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { searchPreferences: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const existingPreferences = (user.searchPreferences ?? {}) as Record<string, unknown>;
+
+    const roadmap: RoadmapPreferences = {
+      skillIds: cleanedIds,
+      savedAt: new Date().toISOString(),
+    };
+
+    if (trimmedTitle) {
+      roadmap.title = trimmedTitle;
+    }
+
+    const nextPreferences = {
+      ...existingPreferences,
+      roadmap,
+    };
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { searchPreferences: nextPreferences as any },
+    });
+
+    return res.status(201).json({ roadmap });
+  } catch (error) {
+    console.error('Error saving roadmap:', error);
+    return res.status(500).json({ error: 'Failed to save roadmap.' });
+  }
+});
+
 router.get('/:username', async (req, res) => {
   const { username } = req.params as { username: string };
 
