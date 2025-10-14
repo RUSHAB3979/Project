@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 
 interface SkillItem {
@@ -35,10 +36,15 @@ const LEVELS = ['BEGINNER', 'INTERMEDIATE', 'EXPERT'];
 const MODES = ['ONLINE', 'IN_PERSON', 'HYBRID'];
 
 const SkillsPage = () => {
+  const router = useRouter();
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [learningSkillIds, setLearningSkillIds] = useState<string[]>([]);
+  const [isTogglingSkill, setIsTogglingSkill] = useState<string | null>(null);
+  const [actionBanner, setActionBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [filters, setFilters] = useState({
     q: '',
     category: '',
@@ -47,6 +53,57 @@ const SkillsPage = () => {
   });
 
   const totalPages = useMemo(() => Math.ceil(total / 20) || 1, [total]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('token');
+    if (stored) {
+      setToken(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!token) {
+      setLearningSkillIds([]);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchUserSkills = async () => {
+      try {
+        const res = await fetch('http://localhost:3001/api/skills/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to load your skills.');
+        }
+
+        const data = await res.json();
+        setLearningSkillIds((data.learning ?? []).map((skill: SkillItem) => skill.id));
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Error fetching user skills:', error);
+        }
+      }
+    };
+
+    fetchUserSkills();
+
+    return () => controller.abort();
+  }, [token]);
+
+  useEffect(() => {
+    if (!actionBanner) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setActionBanner(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [actionBanner]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -88,6 +145,46 @@ const SkillsPage = () => {
     setPage(1);
   };
 
+  const toggleLearningPlan = async (skillId: string) => {
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    const alreadySaved = learningSkillIds.includes(skillId);
+    setIsTogglingSkill(skillId);
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/skills/${skillId}/enroll`, {
+        method: alreadySaved ? 'DELETE' : 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update learning plan');
+      }
+
+      setLearningSkillIds((prev) =>
+        alreadySaved ? prev.filter((id) => id !== skillId) : [...prev, skillId]
+      );
+
+      setActionBanner({
+        type: 'success',
+        text: alreadySaved ? 'Removed from your learning plan.' : 'Added to your learning plan!',
+      });
+    } catch (error) {
+      console.error('Error updating learning plan:', error);
+      setActionBanner({
+        type: 'error',
+        text: 'We could not update your learning plan. Please try again.',
+      });
+    } finally {
+      setIsTogglingSkill(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -98,12 +195,24 @@ const SkillsPage = () => {
             <p className="text-gray-600 mt-2">Discover mentors and peers teaching what you want to learn.</p>
           </div>
           <Link
-            href="/teach"
+            href="/skills/new"
             className="inline-flex items-center justify-center rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
           >
             Offer a Skill
           </Link>
         </div>
+
+        {actionBanner && (
+          <div
+            className={`mt-6 rounded-lg border px-4 py-3 text-sm ${
+              actionBanner.type === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-red-200 bg-red-50 text-red-700'
+            }`}
+          >
+            {actionBanner.text}
+          </div>
+        )}
 
         <div className="mt-8 grid gap-4 md:grid-cols-4">
           <input
@@ -179,17 +288,35 @@ const SkillsPage = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{skill.teacher.name}</p>
-                      <p className="text-xs text-gray-500">{skill.teacher.headline || `@${skill.teacher.username}`}</p>
+                  <div className="mt-6 space-y-3 border-t border-gray-100 pt-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{skill.teacher.name}</p>
+                        <p className="text-xs text-gray-500">{skill.teacher.headline || `@${skill.teacher.username}`}</p>
+                      </div>
+                      <Link
+                        href={`/profile/${skill.teacher.username}`}
+                        className="text-sm font-medium text-blue-600 hover:underline"
+                      >
+                        View mentor
+                      </Link>
                     </div>
-                    <Link
-                      href={`/profile/${skill.teacher.username}`}
-                      className="text-sm font-medium text-blue-600 hover:underline"
+                    <button
+                      type="button"
+                      onClick={() => toggleLearningPlan(skill.id)}
+                      disabled={isTogglingSkill === skill.id}
+                      className={`w-full rounded-md border px-3 py-2 text-xs font-semibold transition sm:w-auto ${
+                        learningSkillIds.includes(skill.id)
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100'
+                      } ${isTogglingSkill === skill.id ? 'opacity-70' : ''}`}
                     >
-                      View mentor
-                    </Link>
+                      {isTogglingSkill === skill.id
+                        ? 'Updating…'
+                        : learningSkillIds.includes(skill.id)
+                        ? 'In your learning plan'
+                        : 'Save to learning plan'}
+                    </button>
                   </div>
                 </article>
               ))}

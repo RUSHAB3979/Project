@@ -104,52 +104,59 @@ const Dashboard = () => {
         ) : (
           <>
             <section className="grid gap-6 md:grid-cols-2">
-              <div className="rounded-2xl bg-white p-6 shadow-sm">
-                <h1 className="text-2xl font-semibold text-gray-900">Welcome back{user ? `, ${user.name.split(' ')[0]}` : ''} 👋</h1>
-                <p className="mt-2 text-sm text-gray-600">
+              <div className="relative overflow-hidden rounded-2xl bg-white/90 p-6 shadow-lg sm:p-8 animate-fade-up">
+                <div className="pointer-events-none absolute -top-16 -right-14 h-44 w-44 rounded-full bg-blue-100/70 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-16 -left-8 h-36 w-36 rounded-full bg-cyan-200/60 blur-3xl" />
+                <h1 className="text-2xl font-semibold text-gray-900 sm:text-3xl">Welcome back{user ? `, ${user.name.split(' ')[0]}` : ''} 👋</h1>
+                <p className="mt-2 text-sm text-gray-600 sm:text-base">
                   Ready to teach, learn, or collaborate today? Explore your perfect matches and recommended skills to keep growing.
                 </p>
-                <div className="mt-6 flex flex-wrap gap-4">
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
                   <Link
-                    href="/teach"
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+                    href="/skills/new"
+                    className="w-full rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm hover:bg-blue-700 sm:w-auto sm:px-5"
                   >
                     Offer a Skill
                   </Link>
                   <Link
                     href="/learn"
-                    className="rounded-lg border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                    className="w-full rounded-lg border border-blue-600 px-4 py-3 text-center text-sm font-semibold text-blue-600 hover:bg-blue-50 sm:w-auto sm:px-5"
                   >
                     Find a Mentor
                   </Link>
                 </div>
               </div>
-              <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 p-6 text-white shadow-sm">
-                <p className="text-sm uppercase tracking-wide text-blue-100">SkillCoins</p>
-                <p className="mt-4 text-4xl font-bold">{user?.skillcoins ?? 0}</p>
-                <p className="mt-2 text-sm text-blue-100">Earn by teaching peers or completing mentorship sessions.</p>
-                <Link href="/wallet" className="mt-6 inline-flex text-sm font-semibold text-white/90 underline">
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 p-6 text-white shadow-lg sm:p-8 animate-fade-up">
+                <div className="pointer-events-none absolute right-10 top-6 h-20 w-20 rounded-full bg-white/20 blur-2xl float-slow" />
+                <div className="pointer-events-none absolute left-0 bottom-0 h-32 w-32 translate-y-12 rounded-full bg-white/10 blur-3xl" />
+                <p className="text-sm uppercase tracking-wide text-blue-100/80 sm:text-xs">SkillCoins</p>
+                <p className="mt-4 text-4xl font-bold sm:text-5xl">{user?.skillcoins ?? 0}</p>
+                <p className="mt-2 text-sm text-blue-100 sm:text-base">Earn by teaching peers or completing mentorship sessions.</p>
+                <Link href="/wallet" className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-white/90 underline">
                   View wallet activity
+                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M7 5l5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </Link>
               </div>
             </section>
 
-            <section className="mt-10">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Perfect Matches</h2>
-                <Link href="/community" className="text-sm font-semibold text-blue-600 hover:underline">
+            <section className="mt-12">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 sm:text-xl">Perfect Matches</h2>
+                <Link href="/community" className="text-sm font-semibold text-blue-600 hover:underline sm:text-base">
                   See all
                 </Link>
               </div>
               {perfectMatches.length === 0 ? (
-                <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-500">
+                <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-white/90 p-10 text-center text-gray-500">
                   No matches yet. Add more skills you want to learn or teach to improve recommendations.
                 </div>
               ) : (
-                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {perfectMatches.map((match) => (
-                    <article key={match.matchUser.id} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                      <div className="flex items-center justify-between">
+                    <article key={match.matchUser.id} className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white/95 p-5 shadow-lg transition-transform duration-200 hover:-translate-y-1 hover:shadow-xl">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-base font-semibold text-gray-900">{match.matchUser.name}</p>
                           <p className="text-xs text-gray-500">{match.matchUser.headline || `@${match.matchUser.username}`}</p>
@@ -163,11 +170,11 @@ const Dashboard = () => {
                           <li key={reason}>• {reason}</li>
                         ))}
                       </ul>
-                      <div className="mt-4 flex items-center justify-between text-sm">
-                        <Link href={`/profile/${match.matchUser.username}`} className="font-semibold text-blue-600 hover:underline">
+                      <div className="mt-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                        <Link href={`/profile/${match.matchUser.username}`} className="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
                           View profile
                         </Link>
-                        <Link href={`/mentorship`} className="text-gray-500 hover:text-gray-700">
+                        <Link href={`/mentorship`} className="text-gray-500 hover:text-gray-700 sm:text-right">
                           Start chat
                         </Link>
                       </div>
@@ -177,10 +184,10 @@ const Dashboard = () => {
               )}
             </section>
 
-            <section className="mt-10">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Recommended Skills</h2>
-                <Link href="/skills" className="text-sm font-semibold text-blue-600 hover:underline">
+            <section className="mt-12">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 sm:text-xl">Recommended Skills</h2>
+                <Link href="/skills" className="text-sm font-semibold text-blue-600 hover:underline sm:text-base">
                   Explore more
                 </Link>
               </div>
@@ -189,22 +196,22 @@ const Dashboard = () => {
                   We&apos;re still curating skills for you. Check back soon.
                 </div>
               ) : (
-                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {topSkills.map((skill) => (
-                    <article key={skill.id} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-500">
+                    <article key={skill.id} className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white/95 p-5 shadow-lg transition-transform duration-200 hover:-translate-y-1 hover:shadow-xl">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="rounded-full bg-gradient-to-r from-orange-100 to-amber-100 px-3 py-1 text-xs font-semibold text-orange-500">
                           {skill.category}
                         </span>
                         <span className="text-xs font-medium text-gray-500">{skill.level}</span>
                       </div>
                       <h3 className="mt-4 text-base font-semibold text-gray-900">{skill.name}</h3>
                       <p className="mt-2 text-sm text-gray-600">By {skill.teacher.name}</p>
-                      <div className="mt-4 flex items-center justify-between text-sm">
+                      <div className="mt-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                         <Link href={`/skills`} className="font-semibold text-blue-600 hover:underline">
                           View details
                         </Link>
-                        <Link href={`/profile/${skill.teacher.username}`} className="text-gray-500 hover:text-gray-700">
+                        <Link href={`/profile/${skill.teacher.username}`} className="text-gray-500 hover:text-gray-700 sm:text-right">
                           Mentor profile
                         </Link>
                       </div>

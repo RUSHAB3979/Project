@@ -3,7 +3,7 @@
 
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent } from 'react';
 
 const SignupForm: NextPage = () => {
   const router = useRouter();

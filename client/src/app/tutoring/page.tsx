@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import TutoringRequestForm from '@/components/TutoringRequestForm';
@@ -98,10 +99,13 @@ export default function TutoringPage() {
       <div className="bg-white rounded-lg shadow-md p-6 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            <img
-              src={isReceived ? request.student.profile_img || '/default-avatar.png' : request.tutor.profile_img || '/default-avatar.png'}
+            <Image
+              src={(isReceived ? request.student.profile_img : request.tutor.profile_img) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" rx="48" fill="%23E0E7FF"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="36" fill="%234566d0">SX</text></svg>'}
               alt="Profile"
-              className="w-12 h-12 rounded-full"
+              width={48}
+              height={48}
+              className="h-12 w-12 rounded-full object-cover"
+              unoptimized
             />
             <div>
               <h3 className="font-semibold">

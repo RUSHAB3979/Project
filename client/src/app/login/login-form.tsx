@@ -97,7 +97,7 @@ const LoginForm: NextPage = () => {
         </form>
 
         <p className="mt-8 text-center text-sm text-gray-600">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <a href="/signup" className="font-medium text-blue-500 hover:text-blue-800">
             Sign up
           </a>
