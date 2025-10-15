@@ -15,7 +15,10 @@ router.get(
 
 router.get(
   '/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: 'http://localhost:3000/login?error=auth_failed' }),
+  passport.authenticate('google', {
+    session: false,
+    failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=auth_failed`
+  }),
   async (req: any, res) => {
     try {
       console.log('Google callback received:', req.user);
@@ -28,7 +31,7 @@ router.get(
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Auth error:', error);
-      res.redirect('http://localhost:3000/login?error=auth_failed');
+      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=auth_failed`);
     }
   }
 );
