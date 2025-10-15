@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import TutoringRequestForm from '@/components/TutoringRequestForm';
+import { apiUrl } from '@/lib/api';
 
 interface TutoringRequest {
   id: string;
@@ -47,7 +48,7 @@ export default function TutoringPage() {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-      const res = await fetch('http://localhost:3001/api/tutoring/my-requests', {
+  const res = await fetch(apiUrl('/api/tutoring/my-requests'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -70,7 +71,7 @@ export default function TutoringPage() {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-      const res = await fetch(`http://localhost:3001/api/tutoring/request/${requestId}`, {
+  const res = await fetch(apiUrl(`/api/tutoring/request/${requestId}`), {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

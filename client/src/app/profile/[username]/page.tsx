@@ -4,6 +4,7 @@
 import type { NextPage } from 'next';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { apiUrl } from '@/lib/api';
 
 interface User {
   id: string;
@@ -19,7 +20,7 @@ const ProfilePage: NextPage = () => {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const res = await fetch(`http://localhost:3001/api/users/${username}`);
+  const res = await fetch(apiUrl(`/api/users/${username}`));
       const data = await res.json();
       setUser(data);
     };

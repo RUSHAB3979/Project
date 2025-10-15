@@ -3,6 +3,7 @@
 
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
+import { apiUrl } from '@/lib/api';
 import { useState, FormEvent } from 'react';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
@@ -15,7 +16,7 @@ const LoginForm: NextPage = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch('http://localhost:3001/api/auth/login', {
+    const res = await fetch(apiUrl('/api/auth/login'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

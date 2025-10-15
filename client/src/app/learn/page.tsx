@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiUrl } from '@/lib/api';
 
 interface SkillItem {
   id: string;
@@ -51,7 +52,7 @@ const LearnPage = () => {
 
       try {
         if (token) {
-          const res = await fetch('http://localhost:3001/api/skills/recommended', {
+          const res = await fetch(apiUrl('/api/skills/recommended'), {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -72,7 +73,7 @@ const LearnPage = () => {
           }
         }
 
-        const fallbackRes = await fetch('http://localhost:3001/api/skills?page=1&pageSize=6', {
+  const fallbackRes = await fetch(apiUrl('/api/skills?page=1&pageSize=6'), {
           signal: controller.signal,
         });
 
@@ -108,7 +109,7 @@ const LearnPage = () => {
 
     const loadRoadmap = async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/users/me/roadmap', {
+  const res = await fetch(apiUrl('/api/users/me/roadmap'), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -174,7 +175,7 @@ const LearnPage = () => {
     setIsSavingRoadmap(true);
 
     try {
-      const res = await fetch('http://localhost:3001/api/users/me/roadmap', {
+  const res = await fetch(apiUrl('/api/users/me/roadmap'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

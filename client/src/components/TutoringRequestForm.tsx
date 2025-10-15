@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiUrl } from '@/lib/api';
 
 interface Skill {
   id: string;
@@ -43,7 +44,7 @@ export default function TutoringRequestForm({ onClose, onSuccess }: TutoringRequ
   const fetchSkills = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3001/api/skills', {
+  const res = await fetch(apiUrl('/api/skills'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -60,7 +61,7 @@ export default function TutoringRequestForm({ onClose, onSuccess }: TutoringRequ
   const fetchTutors = async (skillId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3001/api/skills/${skillId}/tutors`, {
+  const res = await fetch(apiUrl(`/api/skills/${skillId}/tutors`), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -81,7 +82,7 @@ export default function TutoringRequestForm({ onClose, onSuccess }: TutoringRequ
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3001/api/tutoring/request', {
+  const res = await fetch(apiUrl('/api/tutoring/request'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

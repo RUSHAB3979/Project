@@ -4,6 +4,7 @@
 import type { NextPage } from 'next';
 import { useRouter } from 'next/navigation';
 import { useState, FormEvent } from 'react';
+import { apiUrl } from '@/lib/api';
 
 const SignupForm: NextPage = () => {
   const router = useRouter();
@@ -22,7 +23,7 @@ const SignupForm: NextPage = () => {
       return;
     }
 
-    const res = await fetch('http://localhost:3001/api/auth/signup', {
+  const res = await fetch(apiUrl('/api/auth/signup'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

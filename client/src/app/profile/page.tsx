@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
+import { apiUrl } from '@/lib/api';
 
 type AvailabilityStatus = 'ONLINE' | 'BUSY' | 'LEARNING' | 'OFFLINE';
 
@@ -33,7 +34,7 @@ export default function ProfilePage() {
       if (!token) return;
 
       try {
-        const res = await fetch('http://localhost:3001/api/auth/me', {
+  const res = await fetch(apiUrl('/api/auth/me'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -65,7 +66,7 @@ export default function ProfilePage() {
     if (!token || !user) return;
 
     try {
-      const res = await fetch(`http://localhost:3001/api/users/${user.id}`, {
+  const res = await fetch(apiUrl(`/api/users/${user.id}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

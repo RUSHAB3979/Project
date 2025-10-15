@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import { apiUrl } from '@/lib/api';
 
 interface DashboardUser {
   id: string;
@@ -59,9 +60,9 @@ const Dashboard = () => {
     const fetchDashboard = async () => {
       try {
         const [userRes, matchesRes, skillsRes] = await Promise.all([
-          fetch('http://localhost:3001/api/auth/me', { headers }),
-          fetch('http://localhost:3001/api/matches', { headers }),
-          fetch('http://localhost:3001/api/skills/recommended', { headers }),
+          fetch(apiUrl('/api/auth/me'), { headers }),
+          fetch(apiUrl('/api/matches'), { headers }),
+          fetch(apiUrl('/api/skills/recommended'), { headers }),
         ]);
 
         if (userRes.status === 401) {

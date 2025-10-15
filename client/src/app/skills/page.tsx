@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import { apiUrl } from '@/lib/api';
 
 interface SkillItem {
   id: string;
@@ -71,7 +72,7 @@ const SkillsPage = () => {
 
     const fetchUserSkills = async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/skills/me', {
+  const res = await fetch(apiUrl('/api/skills/me'), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -118,7 +119,7 @@ const SkillsPage = () => {
       });
 
       try {
-        const res = await fetch(`http://localhost:3001/api/skills?${params.toString()}`, {
+  const res = await fetch(apiUrl(`/api/skills?${params.toString()}`), {
           signal: controller.signal,
         });
         if (!res.ok) {
@@ -155,7 +156,7 @@ const SkillsPage = () => {
     setIsTogglingSkill(skillId);
 
     try {
-      const response = await fetch(`http://localhost:3001/api/skills/${skillId}/enroll`, {
+  const response = await fetch(apiUrl(`/api/skills/${skillId}/enroll`), {
         method: alreadySaved ? 'DELETE' : 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

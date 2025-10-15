@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { apiUrl } from '@/lib/api';
 
 interface User {
   id: string;
@@ -28,7 +29,7 @@ export default function Navbar() {
       }
 
       try {
-        const res = await fetch('http://localhost:3001/api/auth/me', {
+  const res = await fetch(apiUrl('/api/auth/me'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -59,7 +60,7 @@ export default function Navbar() {
 
     try {
       if (token) {
-        await fetch('http://localhost:3001/api/auth/logout', {
+  await fetch(apiUrl('/api/auth/logout'), {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,

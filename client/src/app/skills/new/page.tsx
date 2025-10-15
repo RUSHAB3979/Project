@@ -3,6 +3,7 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import { apiUrl } from '@/lib/api';
 
 const LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'] as const;
 const SESSION_MODES = ['ONLINE', 'IN_PERSON', 'HYBRID'] as const;
@@ -49,7 +50,7 @@ const SkillCreatePage = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/skills', {
+  const response = await fetch(apiUrl('/api/skills'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,7 @@
 "use client";
 
+import { apiUrl } from '@/lib/api';
+
 interface GoogleSignInButtonProps {
   className?: string;
 }
@@ -8,7 +10,7 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ className = '' 
   const handleGoogleSignIn = () => {
     console.log('Initiating Google Sign In');
     localStorage.setItem('loginRedirect', window.location.pathname);
-    window.location.href = 'http://localhost:3001/api/auth/google';
+    window.location.href = apiUrl('/api/auth/google');
   };
 
   return (
